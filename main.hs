@@ -1,37 +1,32 @@
-import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
-import qualified Data.Map as M
-import qualified Data.List as L
-import Data.Array ( listArray, Array )
+import Data.List
+import Data.List.Split 
 import System.IO
 import Data.Maybe 
-import Data.Either
 import Data.Ord
 import System.Environment
-import Control.Monad
+
+type State = String
 
 class FA a where
-  states :: a state symbol -> [[state]]
-  alphabet :: a state symbol -> [symbol]
-  -- startStates :: a state symbol -> Either state [state]
-  finalStates :: a state symbol -> [[state]]
-  transitionTable :: a state symbol -> M.Map [state] (M.Map symbol [[state]])
+  states :: a symbol -> [State]
+  alphabet :: a symbol -> [symbol]
+  finalStates :: a symbol -> [State]
+  transitionTable :: a symbol -> [(State,[(symbol,[State])])]
 
--- data NFA state symbol = NFA [state] [symbol] [state] [state] (M.Map state (M.Map symbol [state]))
-data NFA state symbol = NFA {
-  nfaStates :: [[state]],
+data NFA symbol = NFA {
+  nfaStates ::[State],
   nfaAlphabet :: [symbol],
-  nfaStartStates :: [[state]],
-  nfaFinalStates :: [[state]],
-  nfaTransitionTable :: M.Map [state] (M.Map symbol [[state]])
+  nfaStartStates :: [State],
+  nfaFinalStates :: [State],
+  nfaTransitionTable :: [(State,[(symbol,[State])])]
 } deriving (Show)
 
-data DFA state symbol = DFA {
-  dfaStates :: [[state]],
+data DFA symbol = DFA {
+  dfaStates :: [State],
   dfaAlphabet :: [symbol],
-  dfaStartState :: [state],
-  dfaFinalStates :: [[state]],
-  dfaTransitionTable :: M.Map [state] (M.Map symbol [[state]])
+  dfaStartState :: State,
+  dfaFinalStates :: [State],
+  dfaTransitionTable :: [(State,[(symbol,[State])])]
 }
 
 instance FA NFA where
@@ -44,54 +39,54 @@ instance FA NFA where
 instance FA DFA where
   states = dfaStates
   alphabet = dfaAlphabet
-  -- startStates dfa = Left (dfaStartState dfa)
   finalStates = dfaFinalStates
   transitionTable = dfaTransitionTable
 
-instance (Eq state,Show state, Show symbol) => Show (DFA state symbol) where
+instance (Show symbol) => Show (DFA symbol) where
   show dfa = do
-    st <- M.assocs $ transitionTable dfa
+    st <- transitionTable dfa
     filter (not . (`elem` "\"")) (format st) where
-      format :: ([state], M.Map symbol [[state]]) -> String
       format transition =
         let 
           st = fst transition
           state   | st == dfaStartState dfa = "> " ++ show st 
                   | st `elem` finalStates dfa =  "* " ++ show st 
                   | otherwise = "  " ++ show st
-          (_:symbolTrStates) = concat [ ", "++((show.fst) syTr ++ " " ++ unwords (L.map show (snd syTr)))  |  syTr <- M.assocs $ snd transition]
+          (_:symbolTrStates) = concat [ ", "++((show.fst) syTr ++ " " ++ unwords (map show (snd syTr)))  |  syTr <- snd transition]
         in
            state ++ " |" ++ symbolTrStates ++ "\n"
 
-  
+trim ch = dropWhileEnd (==ch) . dropWhile (==ch)
 
 powerset :: [a] -> [[a]]
 powerset [] = [[]]
 powerset (x:xs) = map (x:) (powerset xs) ++ powerset xs
 
-getStates :: (Ord k1, Ord k2) => M.Map k2 (M.Map k1 [a]) -> k2 -> k1 -> [a]
-getStates table state symbol = fromMaybe [] $ M.lookup symbol (fromJust $ M.lookup state table)
 
+getStates :: (Eq a1, Eq a2) => [(a2, [(a1, [a3])])] -> a2 -> a1 -> [a3]
+getStates table state symbol = fromMaybe [] $ lookup symbol (fromJust $ lookup state table)
+
+parse :: [Char] -> ([Char], [Char], [([Char], [([Char], [[Char]])])])
 parse str = 
     let 
-       [s,t] = T.splitOn (T.singleton '|') (T.pack str)
-       state = T.dropAround (\x -> x == '>' || x == '*' || x == ' ') s
-       startState = if T.elem '>' s then state else T.pack ""
-       finalState = if T.elem '*' s then state else T.pack ""
-       transitions = [(T.unpack $ L.head list, L.map T.unpack (L.tail list)) | list <- parseTransition t] where
-       parseTransition text = L.map (T.splitOn (T.singleton ' ')) $ T.splitOn (T.singleton ',') (T.strip text)
+       [s,t] = splitOn ['|'] (trim ' ' str)
+       state =  trim ' ' (s \\ ['>', '*'])
+       startState = if '>' `elem` s then state else ""
+       finalState = if '*' `elem` s then state else ""
+       transitions = [(head list, tail list) | list <- parseTransition $ trim ' ' t]
+       parseTransition text = map (splitOn [' ']. trim ' ') (splitOn [','] text)
     in
-        (T.unpack startState, T.unpack finalState,[(T.unpack state, M.fromList transitions)])
+        (startState, finalState,[(state,transitions)])
 
 
-nondeterministicA = NFA ["0", "1","2"] ["a", "b"] ["0"] ["2"] (M.fromList [("0",M.fromList [("a",["0","1"]),("b",["0"])]),("1",M.fromList [("b",["2"])]),("2",M.fromList [("a",["0","2"]),("b",["1"])])])
+nondeterministicA = NFA ["0", "1","2"] ["a", "b"] ["0"] ["2"] [("0", [("a",["0","1"]),("b",["0"])]),("1", [("b",["2"])]),("2", [("a",["0","2"]),("b",["1"])])]
 
-subsetConstruction :: Eq state => Ord state => Ord symbol => NFA state symbol -> DFA state symbol
+subsetConstruction :: Ord symbol => NFA symbol -> DFA symbol
 subsetConstruction nfa=
   let
-    newFinalStates =  [concat s | s <- powerset $ states nfa, L.intersect s (finalStates nfa) /= []  ]
-    newTable = M.fromList [ (concat s, M.fromList [(sym, foldl L.union [] [ getStates (transitionTable nfa) p sym | p <- s, isJust $ M.lookup p (transitionTable nfa)]) | sym <- alphabet nfa]) | s <- powerset $ states nfa, s /= [] ]  
-    newStates = M.keys newTable
+    newFinalStates =  [concat s | s <- powerset $ states nfa, intersect s (finalStates nfa) /= []  ]
+    newTable = [ (concat s,  [(sym, foldl union [] [ getStates (transitionTable nfa) p sym | p <- s, isJust $ lookup p (transitionTable nfa)]) | sym <- alphabet nfa]) | s <- powerset $ states nfa, s /= [] ]  
+    newStates = map fst newTable
     
   in
     DFA newStates (alphabet nfa) (head $ nfaStartStates nfa) newFinalStates newTable
@@ -106,27 +101,20 @@ main = do
     [] -> doHandler stdin
     file:_ -> withFile file ReadMode doHandler
 
-doHandler :: Handle -> IO()
-doHandler h = handleHelper h [] where
-     handleHelper handle input = do
-      eof <- hIsEOF handle
-      if eof then
-        print $ finalOut input
-      else do
-        line <- hGetLine handle
-        handleHelper handle (input++[line])
+doHandler :: Handle -> IO ()
+doHandler h = do
+  s <- hGetContents h
+  print $ finalOut (lines s)
 
   
-
-finalOut :: [String] -> DFA Char String
 finalOut contents =  
     let 
-      parsed = L.map parse contents
-      table = M.fromList $ concatMap sel3 parsed 
+      parsed = map parse contents
+      table = concatMap sel3 parsed 
       startStates = map sel1 parsed
       finalStates = map sel2 parsed
-      parsedStates = M.keys table
-      symbols = L.maximumBy (comparing length) (L.map (M.keys . snd) (M.assocs table))
+      parsedStates = map fst table
+      symbols = maximumBy (comparing length) (map (map fst . snd) table)
       deterministic = subsetConstruction  (NFA parsedStates symbols startStates finalStates table)
     in 
       deterministic
