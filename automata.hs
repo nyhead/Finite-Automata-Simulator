@@ -47,9 +47,10 @@ instance (Show symbol) => Show (DFA symbol) where
       format transition =
         let 
           st = fst transition
-          state   | st == dfaStartState dfa = "> " ++ show st 
-                  | st `elem` finalStates dfa =  "* " ++ show st 
-                  | otherwise = "  " ++ show st
+          state   | st `elem` finalStates dfa  && st == dfaStartState dfa = ">* " ++ show st 
+                  | st == dfaStartState dfa = ">  " ++ show st 
+                  | st `elem` finalStates dfa =  "*  " ++ show st 
+                  | otherwise = "   " ++ show st
           (_:symbolTrStates) = concat [ ", "++((show.fst) syTr ++ " " ++ unwords (map show (snd syTr)))  |  syTr <- snd transition]
         in
            state ++ " |" ++ symbolTrStates ++ "\n"
@@ -67,10 +68,9 @@ mylookup state table =
         | otherwise = []
   in
     j 
--- getStates :: (Eq a1, Eq a2) => [(State, [(a1, [State])])] -> a2 -> State -> [State]
-getStates table state symbol = fromMaybe [] $ lookup symbol ( mylookup state table)
 
-nondeterministicA = NFA ["0", "1","2"] ["a", "b"] ["0"] ["2"] [("0", [("a",["0","1"]),("b",["0"])]),("1", [("b",["2"])]),("2", [("a",["0","2"]),("b",["1"])])]
+getStates :: Eq a1 => [(State, [(a1, [a2])])] -> State -> a1 -> [a2]
+getStates table state symbol = fromMaybe [] $ lookup symbol ( mylookup state table)
 
 subsetConstruction :: Ord symbol => NFA symbol -> DFA symbol
 subsetConstruction nfa=
@@ -83,8 +83,9 @@ subsetConstruction nfa=
     DFA newStates (alphabet nfa) (head $ nfaStartStates nfa) newFinalStates newTable
 
 
-partialTransition fa state symbol = 
-  let 
-    nextSt = getStates (transitionTable fa) state symbol 
-  in
-    nextSt
+
+partialTransition :: (Eq a1, FA a2) => a2 a1 -> State -> a1 -> [State]
+partialTransition fa = getStates (transitionTable fa) 
+extendedTransition :: FA a => Eq sym => a [sym] -> [sym] -> State -> State  
+extendedTransition fa [a] state = concat $ partialTransition fa state [a]
+extendedTransition fa (a:w) state = extendedTransition fa w (concat $ partialTransition fa state [a])
