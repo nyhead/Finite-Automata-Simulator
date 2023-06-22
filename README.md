@@ -9,7 +9,7 @@ The input for the NFA to DFA conversion program follows a specific format. Each 
 ## How to Run the Program?
 ```haskell
 ghci main.hs
-:main <optional_filename>
+:main <optional_filename> <words separated by whitespace>
 ``` 
 
 ## NFA
