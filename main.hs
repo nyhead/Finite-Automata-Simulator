@@ -23,10 +23,14 @@ parse str =
     in
         (startState, finalState,[(state,transitions)])
 
-doHandler :: Handle -> IO ()
-doHandler h = do
+doHandler :: Handle -> String -> IO ()
+doHandler h w = do
   s <- hGetContents h
-  print $ finalOut (lines s)
+  let m = minimizeDFA $ finalOut (lines s)
+  let strAcc = [ "is " ++ word ++ " accepted: " ++ show ( isAccepted m word) | word <- words w]
+  let d = unlines strAcc ++ show m
+  putStrLn d
+
 
   
 finalOut contents =  
@@ -45,5 +49,7 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-    [] -> doHandler stdin
-    file:_ -> withFile file ReadMode doHandler
+    [words] -> doHandler stdin words
+    [file,words] -> do 
+      h <- openFile file ReadMode
+      doHandler h words 
