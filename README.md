@@ -8,10 +8,11 @@ The input for the NFA to DFA conversion program follows a specific format. Each 
 
 ## How to Run the Program?
 ```haskell
-ghci main.hs
-:main <optional_filename> <words separated by whitespace>
+runghc <file_name> <words, if not present in the input file>
 ``` 
-
+Example
+runghc f_noinput.txt a ab aaa
+runghc f_input.txt
 ## NFA
 A Nondeterministic Finite Automaton (NFA) is a mathematical model used in computer science and formal language theory. It consists of a finite set of states, a set of input symbols, a transition function, an initial state, and a set of accepting states. Unlike a Deterministic Finite Automaton (DFA), an NFA can have multiple possible states to transition to for a given input symbol.
 
