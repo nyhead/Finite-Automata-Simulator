@@ -8,12 +8,12 @@ The input for the NFA to DFA conversion program follows a specific format. Each 
 
 ## How to Run the Program?
 ```haskell
-runghc <file_name> <words, if not present in the input file>
+runghc main.hs <file_name> <words, if not present in the input file>
 ``` 
 Example
 ```
-runghc f_noinput.txt a ab aaa
-runghc f_input.txt
+runghc main.hs input.txt a ab aaa
+runghc main.hs input_words.txt
 ```
 If words are present in the arguments then words in the file if present are ignored
 ## NFA
