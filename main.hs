@@ -8,22 +8,23 @@ import Automata
 trim :: Eq a => [a] -> [a] -> [a]
 trim chs = dropWhileEnd (`elem` chs) . dropWhile (`elem` chs)
 
-parse :: String -> (String, String, [(String, [(String, [String])])], [String])
+parse :: String -> (State, State, [(State, [(State, [State])])], [String])
 parse str
     | '|' `elem` str = let
           [s,t] = splitOn "|" (trim " \r" str)
+          parseTransition text = map (splitOn " ". trim " \r") (splitOn "," text)
+          
           state = trim " \r" (s \\ ">*")
           startState = if '>' `elem` s then state else ""
           finalState = if '*' `elem` s then state else ""
           transitions = [(head list, tail list) | list <- parseTransition $ trim " \r" t]
-          parseTransition text = map (splitOn " ". trim " \r") (splitOn "," text)
         in
           (startState, finalState, [(state,transitions)], [])
     | otherwise = ("", "", [], words str)  -- assuming this is a word line
 
 
-finalOut :: [(String, String, [(String, [(String, [String])])], [String])]
-         -> (DFA String, [String])
+finalOut :: [(State, State, [(State, [(State, [State])])], [State])]
+         -> (DFA State, [State])
 finalOut parsed = 
     let 
       (startStates, finalStates, transitions, w) = unzip4 parsed
@@ -53,7 +54,7 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-    [] -> print "" --change
+    [] -> print "runghc <file_name> <words, if not present in the input file>" --change
     file:iwords -> do 
       h <- openFile file ReadMode
       doHandler h iwords
