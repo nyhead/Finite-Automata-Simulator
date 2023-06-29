@@ -12,12 +12,12 @@ parse :: String -> (State, State, [(State, [(State, [State])])], [String])
 parse str
     | '|' `elem` str = let
           [s,t] = splitOn "|" (trim " \r" str)
-          parseTransition text = map (splitOn " ". trim " \r") (splitOn "," text)
+          parseTransition text = map words (splitOn "," text)
           
           state = trim " \r" (s \\ ">*")
           startState = if '>' `elem` s then state else ""
           finalState = if '*' `elem` s then state else ""
-          transitions = [(head list, tail list) | list <- parseTransition $ trim " \r" t]
+          transitions = [(h,t) | (h:t) <- parseTransition $ trim " \r" t]
         in
           (startState, finalState, [(state,transitions)], [])
     | otherwise = ("", "", [], words str)  -- assuming this is a word line
@@ -54,9 +54,6 @@ doHandler h minimize givenWords = do
     strAcc = map str (filter (/= []) wordsToCheck) -- check input words
 
     out = unlines strAcc ++ show dfa
-    
-    --debug
-    -- out = show $undistinguishable d (distinguishable d)
   putStrLn out
 
 main :: IO ()

@@ -106,9 +106,13 @@ delUnReachable dfa =
   in
     newDFA
 
+findRealRepresentation :: [State] -> [[State]] -> [State]
+findRealRepresentation st states = fromMaybe [] (find (\x -> null (x \\ st)) states )
+
 subsetConstructionTable :: (FA f, Eq sy) => p -> f sy -> [(State, [(sy, [State])])]
 subsetConstructionTable table nfa = do
-  s <- filter (/= []) $ powerset $ states nfa
+  let sts = filter (/= []) $ powerset $ states nfa
+  s <- sts
   let first = concat s
   let second = do
         sym <- alphabet nfa
@@ -116,7 +120,7 @@ subsetConstructionTable table nfa = do
               p <- s
               guard (isJust $ lookup p (transitionTable nfa))
               return $ getStates (transitionTable nfa) p sym
-        return (sym, foldl union [] stateList)
+        return (sym, findRealRepresentation (foldl union [] stateList) sts)
   return (first, second)
 
 subsetConstruction :: Ord symbol => NFA symbol -> DFA symbol
@@ -141,7 +145,6 @@ applyUntil f s
 distinguishable :: Eq symbol => DFA symbol -> [(State,State)]
 distinguishable dfa = 
   applyUntil (\x -> nub (x ++ findAllMarked (states dfa) x)) (marked (states dfa))
-  -- (marked (states dfa))
   where 
     marked []  = []
     marked (x:xs) = 
@@ -165,7 +168,6 @@ undistinguishable dfa dist =
         isfindUniqueDist 
         [ i : [j | j <- states dfa , (i,j) `notElem` dist, (j,i) `notElem` dist, j/= i ] 
         | i <- states dfa ]
-
 minimizeDfaTable :: (Eq sy, FA f) => [[State]] -> f sy -> [(State, [(sy, [State])])]
 minimizeDfaTable und dfa = do
     ust <- und
@@ -190,5 +192,3 @@ minimizeDFA dfa =
     sstate = unwords $ concat $ filter (elem (dfaStartState dfa)) und
   in
     DFA (map unwords und) (alphabet dfa) sstate fstates table
-
-
