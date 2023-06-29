@@ -72,6 +72,41 @@ powerset (x:xs) = map (x:) (powerset xs) ++ powerset xs
 getStates :: Eq a1 => [(State, [(a1, [a2])])] -> State -> a1 -> [a2]
 getStates table state symbol = fromMaybe [] $ lookup symbol $ fromMaybe [] ( lookup state table)
 
+partialTransition :: (Eq a1, FA a2) => a2 a1 -> State -> a1 -> [State]
+partialTransition fa = getStates (transitionTable fa) 
+
+extendedTransition :: FA a => Eq sym => a [sym] -> [sym] -> State -> State  
+extendedTransition fa as state = foldl f state as
+  where f state a = concat $ partialTransition fa state [a]
+
+isAccepted :: Eq sym => DFA [sym] -> [sym] -> Bool
+isAccepted fa w = extendedTransition fa w (dfaStartState fa) `elem` finalStates fa
+
+
+reachable :: Eq sy => DFA sy -> [State]
+reachable dfa = findAllReachable [dfaStartState dfa] where
+  findAllReachable mi = 
+    let 
+      mi1 = mi `union` 
+        [q | q <- states dfa, x <- alphabet dfa, p <- mi, concat (partialTransition dfa p x) == q]
+    in
+      if mi1 /= mi then
+        findAllReachable mi1
+      else
+        mi1
+
+delUnReachable :: Eq sy => DFA sy -> DFA sy
+delUnReachable dfa = 
+  let 
+    r = reachable dfa
+    newStates = r
+    newFinal = finalStates dfa \\ (finalStates dfa \\ r)
+    newTable = filter (\x -> fst x `elem` r) (transitionTable dfa)
+    newDFA = DFA newStates (alphabet dfa) (dfaStartState dfa) newFinal newTable
+  in
+    newDFA
+
+subsetConstructionTable :: (FA f, Eq sy) => p -> f sy -> [(State, [(sy, [State])])]
 subsetConstructionTable table nfa = do
   s <- filter (/= []) $ powerset $ states nfa
   let first = concat s
@@ -92,18 +127,10 @@ subsetConstruction nfa=
     newStates = keys newTable
     
   in
-    DFA newStates (alphabet nfa) (head $ nfaStartStates nfa) newFinalStates newTable
+   delUnReachable $ DFA newStates (alphabet nfa) (head $ nfaStartStates nfa) newFinalStates newTable
 
 
 
-partialTransition :: (Eq a1, FA a2) => a2 a1 -> State -> a1 -> [State]
-partialTransition fa = getStates (transitionTable fa) 
-extendedTransition :: FA a => Eq sym => a [sym] -> [sym] -> State -> State  
-extendedTransition fa as state = foldl f state as
-  where f state a = concat $ partialTransition fa state [a]
-
-isAccepted :: Eq sym => DFA [sym] -> [sym] -> Bool
-isAccepted fa w = extendedTransition fa w (dfaStartState fa) `elem` finalStates fa
 
 applyUntil :: Eq a => (a -> a) -> a -> a
 applyUntil f s 
@@ -114,7 +141,7 @@ applyUntil f s
 distinguishable :: Eq symbol => DFA symbol -> [(State,State)]
 distinguishable dfa = 
   applyUntil (\x -> nub (x ++ findAllMarked (states dfa) x)) (marked (states dfa))
-
+  -- (marked (states dfa))
   where 
     marked []  = []
     marked (x:xs) = 

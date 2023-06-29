@@ -32,29 +32,42 @@ finalOut parsed =
       words = concat w
       parsedStates = keys table
       symbols = maximumBy (comparing length) (map (keys . snd) table)
-      deterministic = subsetConstruction  (NFA parsedStates symbols startStates finalStates table)
+      deterministic = subsetConstruction (NFA parsedStates symbols  startStates finalStates table)
     in 
       (deterministic, words)
 
-doHandler :: Handle -> [String] -> IO ()
-doHandler h givenWords = do
+doHandler :: Handle -> String -> [String] -> IO ()
+doHandler h minimize givenWords = do
   s <- hGetContents h
   let
-    (dfa, parsedWords) = finalOut $ map parse (lines s) --parse nfa, convert to dfa
-    mdfa = minimizeDFA dfa
+    (d, parsedWords) = finalOut $ map parse (lines s) --parse nfa, convert to dfa
+    
+    dfa 
+      | minimize == "-m" = minimizeDFA d
+      | otherwise = d
+    
+    wordsToCheck
+      | minimize /= "-m" = minimize:givenWords ++ parsedWords 
+      | otherwise = givenWords ++ parsedWords 
 
-    wordsToCheck = if null givenWords then parsedWords else givenWords 
-    str word = "is " ++ word ++ " accepted: " ++ show ( isAccepted mdfa word)
-    strAcc = map str wordsToCheck -- check input words
+    str word = "is " ++ word ++ " accepted: " ++ show ( isAccepted dfa word)
+    strAcc = map str (filter (/= []) wordsToCheck) -- check input words
 
-    d = unlines strAcc ++ show mdfa
-  putStrLn d
+    out = unlines strAcc ++ show dfa
+    
+    --debug
+    -- out = show $undistinguishable d (distinguishable d)
+  putStrLn out
 
 main :: IO ()
 main = do
   args <- getArgs
   case args of
-    [] -> print "runghc <file_name> <words, if not present in the input file>" --change
-    file:iwords -> do 
+    [] -> putStrLn "runghc main.hs <file_name> <words, if not present in the input file>"
+    file:rest -> do 
       h <- openFile file ReadMode
-      doHandler h iwords
+      if rest /= [] then do
+        let (minimize:iwords) = rest
+        doHandler h minimize iwords
+      else 
+          doHandler h "" [""]
