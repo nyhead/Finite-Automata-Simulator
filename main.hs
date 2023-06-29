@@ -60,7 +60,7 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-    [] -> putStrLn "runghc main.hs <file_name> <words, if not present in the input file>"
+    [] -> putStrLn "runghc main.hs <file_name> -m <words, if not present in the input file>"
     file:rest -> do 
       h <- openFile file ReadMode
       if rest /= [] then do
