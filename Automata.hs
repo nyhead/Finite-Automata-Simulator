@@ -53,10 +53,11 @@ printFA nfa isDFA = do
                   | st `elem` finalStates nfa =  "*  " ++ show st 
                   | otherwise = "   " ++ show st
           (_:symbolTrStates) = 
-            intercalate "," (printTransition transition) where
+            intercalate "," 
+            [show from ++ " " ++ printTransition to | (from, to) <- transition] where
             printTransition tr 
-              | isDFA = [show from ++ " " ++ concatMap show to | (from, to) <- tr]
-              | otherwise =  [show from ++ " " ++ unwords (map show to) | (from, to) <- tr]
+              | isDFA = concatMap show tr
+              | otherwise =  unwords (map show tr)
         in
            state ++ " |" ++ symbolTrStates ++ "\n"
 
