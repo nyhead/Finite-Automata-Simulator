@@ -69,6 +69,13 @@ powerset :: [a] -> [[a]]
 powerset [] = [[]]
 powerset (x:xs) = map (x:) (powerset xs) ++ powerset xs
 
+getSymbols :: [(sym, [State])] -> [sym]
+getSymbols = map fst
+
+getAlphabet :: Eq sym => [(State, [(sym, [State])])] -> [sym]
+getAlphabet = nub . concat . map (getSymbols . snd)
+
+
 getStates :: Eq a1 => [(State, [(a1, [a2])])] -> State -> a1 -> [a2]
 getStates table state symbol = fromMaybe [] $ lookup symbol $ fromMaybe [] ( lookup state table)
 
@@ -118,7 +125,6 @@ subsetConstructionTable table nfa = do
         sym <- alphabet nfa
         let stateList = do
               p <- s
-              guard (isJust $ lookup p (transitionTable nfa))
               return $ getStates (transitionTable nfa) p sym
         return (sym, findRealRepresentation (foldl union [] stateList) sts)
   return (first, second)

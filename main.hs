@@ -31,14 +31,13 @@ finalOut parsed =
       table = concat transitions
       words = concat w
       parsedStates = keys table
-      symbols = maximumBy (comparing length) (map (keys . snd) table)
+      symbols = getAlphabet table
       deterministic = subsetConstruction (NFA parsedStates symbols  startStates finalStates table)
     in 
       (deterministic, words)
 
-doHandler :: Handle -> String -> [String] -> IO ()
-doHandler h minimize givenWords = do
-  s <- hGetContents h
+processInput :: String -> String -> [String] -> String
+processInput s minimize givenWords =
   let
     (d, parsedWords) = finalOut $ map parse (lines s) --parse nfa, convert to dfa
     
@@ -54,7 +53,9 @@ doHandler h minimize givenWords = do
     strAcc = map str (filter (/= []) wordsToCheck) -- check input words
 
     out = unlines strAcc ++ show dfa
-  putStrLn out
+  in 
+    out
+    
 
 main :: IO ()
 main = do
@@ -63,8 +64,9 @@ main = do
     [] -> putStrLn "runghc main.hs <file_name> -m <words, if not present in the input file>"
     file:rest -> do 
       h <- openFile file ReadMode
+      i <- hGetContents h
       if rest /= [] then do
         let (minimize:iwords) = rest
-        doHandler h minimize iwords
-      else 
-          doHandler h "" [""]
+        putStrLn $ processInput i minimize iwords
+      else do 
+          putStrLn $ processInput i "" [""]
