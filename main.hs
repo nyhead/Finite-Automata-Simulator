@@ -17,7 +17,7 @@ parse str
           state = trim " \r" (s \\ ">*")
           startState = if '>' `elem` s then state else ""
           finalState = if '*' `elem` s then state else ""
-          transitions = [(h,t) | (h:t) <- parseTransition $ trim " \r" t]
+          transitions = [(h,t) | (h:t) <- parseTransition t]
         in
           (startState, finalState, [(state,transitions)], [])
     | otherwise = ("", "", [], words str)  -- assuming this is a word line

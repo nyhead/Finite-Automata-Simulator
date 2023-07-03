@@ -40,10 +40,10 @@ instance FA DFA where
   finalStates = dfaFinalStates
   transitionTable = dfaTransitionTable
 
-instance (Show symbol) => Show (NFA symbol) where
-  show nfa = do
-
+printFA :: Show sym => NFA sym -> Bool -> String
+printFA nfa isDFA = do
     t <- transitionTable nfa
+
     filter (not . (`elem` "\"")) (format t) where
 
       format (st,transition)  =
@@ -53,13 +53,19 @@ instance (Show symbol) => Show (NFA symbol) where
                   | st `elem` finalStates nfa =  "*  " ++ show st 
                   | otherwise = "   " ++ show st
           (_:symbolTrStates) = 
-            intercalate "," 
-           [(show from ++ " " ++ unwords (map show to)) | (from, to) <- transition]
+            intercalate "," (printTransition transition) where
+            printTransition tr 
+              | isDFA = [show from ++ " " ++ concatMap show to | (from, to) <- tr]
+              | otherwise =  [show from ++ " " ++ unwords (map show to) | (from, to) <- tr]
         in
            state ++ " |" ++ symbolTrStates ++ "\n"
 
+
+instance (Show symbol) => Show (NFA symbol) where
+  show nfa = printFA nfa False
+
 instance (Show symbol) => Show (DFA symbol) where
-  show (DFA q syms start f table) = show (NFA q syms [start] f table)  
+  show (DFA q syms start f table) = printFA (NFA q syms [start] f table) True
 
            
 keys :: [(a, b)] -> [a]
@@ -160,9 +166,9 @@ distinguishable dfa =
         (concat $ getStates table a x , concat $ getStates table b x) `elem` dist
     
     findAllMarked []  _  = []
-    findAllMarked (a:as) dist = 
-        [ (a,b) | b <- states dfa , x <- alphabet dfa , isDist (transitionTable dfa) (a,b) x dist ]
-        ++ findAllMarked as dist
+    findAllMarked as dist = concatMap f as
+        where f a = [ (a,b) | b <- states dfa , x <- alphabet dfa ,
+                              isDist (transitionTable dfa) (a,b) x dist ]
 
 isfindUniqueDist :: Eq a => [[a]] -> [[a]]
 isfindUniqueDist [] = []
@@ -177,14 +183,14 @@ undistinguishable dfa dist =
 minimizeDfaTable :: (Eq sy, FA f) => [[State]] -> f sy -> [(State, [(sy, [State])])]
 minimizeDfaTable und dfa = do
     ust <- und
-    let fstElem = unwords ust
+    let fstElem = concat ust
     let sndElem = do
           sy <- alphabet dfa
           let innerElem = do
                 st <- ust
                 let g = getStates (transitionTable dfa) st sy
                 let filtered = filter (elem (concat g)) und
-                return $ unwords $ concat filtered
+                return $ concat $ concat filtered
           return (sy, nub innerElem)
     return (fstElem, sndElem)
 
@@ -194,7 +200,7 @@ minimizeDFA dfa =
     dist = distinguishable dfa
     und = undistinguishable dfa dist
     table = minimizeDfaTable und dfa
-    fstates = nub [unwords $ concat $ filter (elem f) und | f <- finalStates dfa]
-    sstate = unwords $ concat $ filter (elem (dfaStartState dfa)) und
+    fstates = nub [concat $ concat $ filter (elem f) und | f <- finalStates dfa]
+    sstate = concat $ concat $ filter (elem (dfaStartState dfa)) und
   in
-    DFA (map unwords und) (alphabet dfa) sstate fstates table
+    DFA (map concat und) (alphabet dfa) sstate fstates table
