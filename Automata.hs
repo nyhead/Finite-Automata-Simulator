@@ -80,7 +80,7 @@ getSymbols :: [(sym, [State])] -> [sym]
 getSymbols = map fst
 
 getAlphabet :: Eq sym => [(State, [(sym, [State])])] -> [sym]
-getAlphabet = nub . concat . map (getSymbols . snd)
+getAlphabet = nub . concatMap (getSymbols . snd)
 
 
 getStates :: Eq a1 => [(State, [(a1, [a2])])] -> State -> a1 -> [a2]
