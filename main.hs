@@ -4,6 +4,7 @@ import Data.List
 import Data.List.Split
 import Data.Ord
 import Automata
+import Data.Maybe
 
 trim :: Eq a => [a] -> [a] -> [a]
 trim chs = dropWhileEnd (`elem` chs) . dropWhile (`elem` chs)
@@ -24,7 +25,7 @@ parse str
 
 
 finalOut :: [(State, State, [(State, [(State, [State])])], [State])]
-         -> (DFA State, [State])
+         -> (NFA State, [State])
 finalOut parsed = 
     let 
       (startStates, finalStates, transitions, w) = unzip4 parsed
@@ -32,29 +33,34 @@ finalOut parsed =
       words = concat w
       parsedStates = keys table
       symbols = getAlphabet table
-      deterministic = subsetConstruction (NFA parsedStates symbols  startStates finalStates table)
+      fa = (NFA parsedStates symbols  startStates finalStates table)
     in 
-      (deterministic, words)
+      (fa, words)
 
 processInput :: String -> String -> [String] -> String
 processInput s minimize givenWords =
   let
-    (d, parsedWords) = finalOut $ map parse (lines s) --parse nfa, convert to dfa
-    
-    dfa 
-      | minimize == "-m" = minimizeDFA d
-      | otherwise = d
-    
-    wordsToCheck
-      | minimize /= "-m" = minimize:givenWords ++ parsedWords 
-      | otherwise = givenWords ++ parsedWords 
+  (nd, parsedWords) = finalOut $ map parse (lines s) --parse nfa, convert to dfa
+  in
+    if isJust $ find (\x -> length x > 1) (states nd) then
+      "Each state must be named by a character, not a string."
+    else 
+    let
+      d = subsetConstruction nd
+      dfa 
+        | minimize == "-m" = minimizeDFA d
+        | otherwise = d
+      
+      wordsToCheck
+        | minimize /= "-m" = minimize:givenWords ++ parsedWords 
+        | otherwise = givenWords ++ parsedWords 
 
-    str word = "is " ++ word ++ " accepted: " ++ show ( isAccepted dfa word)
-    strAcc = map str (filter (/= []) wordsToCheck) -- check input words
+      str word = "is " ++ word ++ " accepted: " ++ show ( isAccepted dfa word)
+      strAcc = map str (filter (/= []) wordsToCheck) -- check input words
 
-    out = unlines strAcc ++ show dfa
-  in 
-    out
+      out = unlines strAcc ++ show dfa
+    in  
+      out
     
 
 main :: IO ()
