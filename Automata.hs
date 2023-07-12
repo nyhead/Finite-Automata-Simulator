@@ -102,21 +102,20 @@ reachable dfa = findAllReachable [dfaStartState dfa] where
   findAllReachable mi = 
     let 
       mi1 = mi `union` 
-        [q | q <- states dfa, x <- alphabet dfa, p <- mi, concat (partialTransition dfa p x) == q]
+        [concat q | p <- mi, q <- maybe [] (map snd) (lookup p (transitionTable dfa))]
     in
       if mi1 /= mi then
         findAllReachable mi1
       else
         mi1
-
+  
 delUnReachable :: Eq sy => DFA sy -> DFA sy
 delUnReachable dfa = 
   let 
     r = reachable dfa
-    newStates = r
-    newFinal = finalStates dfa \\ (finalStates dfa \\ r)
+    newFinal = intersect (finalStates dfa) r
     newTable = filter (\x -> fst x `elem` r) (transitionTable dfa)
-    newDFA = DFA newStates (alphabet dfa) (dfaStartState dfa) newFinal newTable
+    newDFA = DFA r (alphabet dfa) (dfaStartState dfa) newFinal newTable
   in
     newDFA
 
@@ -176,11 +175,12 @@ isfindUniqueDist [] = []
 isfindUniqueDist xs = 
   [x | let y = tail xs, x <- xs, null $ concatMap (x `intersect`) y] ++ isfindUniqueDist (tail xs)
 
-undistinguishable :: Eq symbol => DFA symbol -> [(State,State)] -> [[State]]
-undistinguishable dfa dist =
+indistinguishable :: Eq symbol => DFA symbol -> [(State,State)] -> [[State]]
+indistinguishable dfa dist =
         isfindUniqueDist 
         [ i : [j | j <- states dfa , (i,j) `notElem` dist, (j,i) `notElem` dist, j/= i ] 
         | i <- states dfa ]
+
 minimizeDfaTable :: (Eq sy, FA f) => [[State]] -> f sy -> [(State, [(sy, [State])])]
 minimizeDfaTable und dfa = do
     ust <- und
@@ -199,7 +199,7 @@ minimizeDFA :: Eq symbol => DFA symbol -> DFA symbol
 minimizeDFA dfa = 
   let 
     dist = distinguishable dfa
-    und = undistinguishable dfa dist
+    und = indistinguishable dfa dist
     table = minimizeDfaTable und dfa
     fstates = nub [concat $ concat $ filter (elem f) und | f <- finalStates dfa]
     sstate = concat $ concat $ filter (elem (dfaStartState dfa)) und
