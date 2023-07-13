@@ -119,11 +119,11 @@ delUnReachable dfa =
   in
     newDFA
 
-findRealRepresentation :: [State] -> [[State]] -> [State]
-findRealRepresentation st states = fromMaybe [] (find (\x -> null (x \\ st)) states )
+findRealRepr :: [State] -> [[State]] -> [State]
+findRealRepr st states = fromMaybe [] (find (\x -> null (x \\ st)) states )
 
-subsetConstructionTable :: (FA f, Eq sy) => p -> f sy -> [(State, [(sy, [State])])]
-subsetConstructionTable table nfa = do
+subsetConstructionTable :: (FA f, Eq sy) => f sy -> [(State, [(sy, [State])])]
+subsetConstructionTable nfa = do
   let sts = filter (/= []) $ powerset $ states nfa
   s <- sts
   let first = concat s
@@ -132,18 +132,19 @@ subsetConstructionTable table nfa = do
         let stateList = do
               p <- s
               return $ getStates (transitionTable nfa) p sym
-        return (sym, findRealRepresentation (foldl union [] stateList) sts)
+        return (sym, findRealRepr (foldl union [] stateList) sts)
   return (first, second)
 
 subsetConstruction :: Ord symbol => NFA symbol -> DFA symbol
-subsetConstruction nfa=
+subsetConstruction nfa =
   let
     newFinalStates =  [ concat s | s <- powerset $ states nfa, intersect s (finalStates nfa) /= [] ]
-    newTable = subsetConstructionTable (transitionTable nfa) nfa
+    newTable = subsetConstructionTable nfa
     newStates = keys newTable
+    newStartState = concat $ findRealRepr (nfaStartStates nfa) (map (map (:[])) newStates)
     
   in
-   delUnReachable $ DFA newStates (alphabet nfa) (head $ nfaStartStates nfa) newFinalStates newTable
+   DFA newStates (alphabet nfa) newStartState newFinalStates newTable
 
 
 

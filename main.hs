@@ -42,7 +42,7 @@ processInput s args =
   let
     (nd, parsedWords) = parseFA $ map parse (lines s) --parse nfa, convert to dfa
   in
-    if isJust $ find (\x -> length x > 1) (states nd) then
+     if any (\x -> length x > 1) (states nd) then
       "Each state must be named by a character, not a string."
     else 
       let
