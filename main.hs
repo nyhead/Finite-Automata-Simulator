@@ -42,8 +42,8 @@ processInput s args =
   let
     (nd, parsedWords) = parseFA $ map parse (lines s) --parse nfa, convert to dfa
   in
-     if any (\x -> length x > 1) (states nd) then
-      "Each state must be named by a character, not a string."
+     if any (\x -> length x /= 1) (states nd) then
+      "Each state must be named by a character"
     else 
       let
         d = subsetConstruction nd
