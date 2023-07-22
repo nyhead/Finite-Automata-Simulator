@@ -18,24 +18,3 @@ runghc main.hs input.txt a ab aaa
 runghc main.hs input_words.txt
 ```
 Words in the arguments are added to the list of words present in the input file.
-## NFA
-A Nondeterministic Finite Automaton (NFA) is a mathematical model used in computer science and formal language theory. It consists of a finite set of states, a set of input symbols, a transition function, an initial state, and a set of accepting states. Unlike a Deterministic Finite Automaton (DFA), an NFA can have multiple possible states to transition to for a given input symbol.
-
-## DFA
-A Deterministic Finite Automaton (DFA) is another mathematical model used in computer science and formal language theory. Similar to an NFA, it consists of a finite set of states, a set of input symbols, a transition function, an initial state, and a set of accepting states. However, in a DFA, there is only one unique state to transition to for each input symbol.
-
-## Subset Construction
-
-Subset construction is a technique used in automata theory to convert a nondeterministic finite automaton (NFA) into an equivalent deterministic finite automaton (DFA). The subset construction algorithm systematically explores the possible states that the NFA can be in, based on the input symbols, and constructs the corresponding DFA.
-
-The subset construction algorithm works as follows:
-
-1. Start with the initial state of the NFA as the initial state of the DFA.
-2. For each input symbol, compute the set of states that the NFA can transition to from the current DFA state. This set is obtained by considering all possible epsilon transitions and transitions for the input symbol.
-3. If the computed set of states is not already a DFA state, create a new state in the DFA and add it to the set of unprocessed DFA states.
-4. Create a transition from the current DFA state to the newly created DFA state for the current input symbol.
-5. Repeat steps 2-4 for all unprocessed DFA states until no new states are created.
-
-The resulting DFA obtained through subset construction will have a unique state for every subset of states from the original NFA. The transition function of the DFA is determined by the transitions between subsets of states in the NFA.
-
-
