@@ -173,7 +173,8 @@ distinguishable dfa =
 
 isfindUniqueDist :: Eq a => [[a]] -> [[a]]
 isfindUniqueDist [] = []
-isfindUniqueDist xs = [x | let y = tail xs, x <- xs, null $ concatMap (x `intersect`) y] ++ isfindUniqueDist (tail xs)
+isfindUniqueDist xs = [x | let y = tail xs, x <- xs, null $ concatMap (x `intersect`) y] 
+                      ++ isfindUniqueDist (tail xs)
 
 indistinguishable :: Eq symbol => DFA symbol -> [(State,State)] -> [[State]]
 indistinguishable dfa dist =
