@@ -1,4 +1,4 @@
-# NFA to DFA Conversion in Haskell
+# NFA to DFA Conversion and Minimization in Haskell
 
 ## Format of the Input
 The input for the NFA to DFA conversion program follows a specific format. Each transition is represented in one of the following two formats:
